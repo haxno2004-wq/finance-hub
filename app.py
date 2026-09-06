@@ -3,10 +3,17 @@ import pandas as pd
 import sqlite3
 import plotly.express as px
 import plotly.graph_objects as go
-import MetaTrader5 as mt5
 from openai import OpenAI
 import os
 from datetime import date
+
+# --- SAFE METATRADER 5 IMPORT FOR CLOUD COMPATIBILITY ---
+try:
+    import MetaTrader5 as mt5
+    MT5_AVAILABLE = True
+except (ImportError, Exception):
+    mt5 = None
+    MT5_AVAILABLE = False
 
 # Import helpers from finance_hub.py
 from finance_hub import get_loan_summary, send_telegram_alert
@@ -56,11 +63,16 @@ client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=NVIDIA_A
 
 # --- REAL-TIME TRADING PnL FETCHERS ---
 def get_forex_pnl():
-    if not mt5.initialize():
+    if not MT5_AVAILABLE:
         return 0.0
-    positions = mt5.positions_get()
-    mt5.shutdown()
-    return sum(pos.profit for pos in positions) if positions else 0.0
+    try:
+        if not mt5.initialize():
+            return 0.0
+        positions = mt5.positions_get()
+        mt5.shutdown()
+        return sum(pos.profit for pos in positions) if positions else 0.0
+    except Exception:
+        return 0.0
 
 # Fetch local DB cash balances & live PnL
 df_tx = pd.read_sql_query("SELECT * FROM transactions", conn)
@@ -83,6 +95,9 @@ col2.metric("Total Expenses Logged", f"₹ {total_expenses:,.2f}")
 col3.metric("Live MT5 PnL", f"${forex_pnl_usd:,.2f}")
 col4.metric("Paper PnL (3-Wk)", f"${df_paper['pnl'].sum():,.2f}" if not df_paper.empty else "$0.00")
 col5.metric("Avanse Loan Balance", f"₹ {loan_info['balance']:,.2f}")
+
+if not MT5_AVAILABLE:
+    st.info("ℹ️ Note: Live MT5 integration is disabled in cloud hosting (requires local Windows execution environment).")
 
 st.divider()
 
