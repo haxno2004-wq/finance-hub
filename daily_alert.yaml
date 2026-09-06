@@ -2,9 +2,9 @@ name: Daily Telegram Notifications
 
 on:
   schedule:
-    # Runs daily at 03:30 UTC (09:00 AM IST)
+    # 03:30 UTC = 09:00 AM IST
     - cron: '30 3 * * *'
-    # Runs daily at 12:00 UTC (05:30 PM IST)
+    # 12:00 UTC = 05:30 PM IST
     - cron: '0 12 * * *'
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
@@ -24,9 +24,9 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Run Background Script
+      - name: Send Notification
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: |
-          python background_cron.py
+          python -c "from finance_hub import send_telegram_alert; send_telegram_alert('🔔 *GitHub Actions Daily Check*\n• Review active MT5 demo trades\n• Log cashflow entries in Streamlit')"
