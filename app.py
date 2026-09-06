@@ -58,9 +58,13 @@ cursor.execute("""
 conn.commit()
 
 # --- AI SETUP ---
+# --- AI SETUP ---
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
-client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=NVIDIA_API_KEY)
 
+if NVIDIA_API_KEY:
+    client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=NVIDIA_API_KEY)
+else:
+    client = None
 # --- REAL-TIME TRADING PnL FETCHERS ---
 def get_forex_pnl():
     if not MT5_AVAILABLE:
@@ -130,21 +134,24 @@ with tab1:
     with col_ai:
         st.subheader("🤖 Dynamic AI Advisor")
         if st.button("Generate Portfolio Insights"):
-            with st.spinner("Analyzing financial logs..."):
-                try:
-                    summary_prompt = f"Net Cash Balance: INR {cash_balance}, Total Expenses: INR {total_expenses}, Active MT5 PnL: ${forex_pnl_usd}. Loan Balance: INR {loan_info['balance']}."
-                    response = client.chat.completions.create(
-                        model="meta/llama-3.1-70b-instruct",
-                        messages=[
-                            {"role": "system", "content": "You are a corporate financial advisor. Give brief budget insights."},
-                            {"role": "user", "content": summary_prompt}
-                        ],
-                        temperature=0.3
-                    )
-                    st.success("Advisor Response:")
-                    st.write(response.choices[0].message.content)
-                except Exception as e:
-                    st.error(f"NVIDIA API Error: {e}")
+            if not client:
+                st.error("NVIDIA_API_KEY is not configured in Streamlit Secrets.")
+            else:
+                with st.spinner("Analyzing financial logs..."):
+                    try:
+                        summary_prompt = f"Net Cash Balance: INR {cash_balance}, Total Expenses: INR {total_expenses}, Active MT5 PnL: ${forex_pnl_usd}. Loan Balance: INR {loan_info['balance']}."
+                        response = client.chat.completions.create(
+                            model="meta/llama-3.1-70b-instruct",
+                            messages=[
+                                {"role": "system", "content": "You are a corporate financial advisor. Give brief budget insights."},
+                                {"role": "user", "content": summary_prompt}
+                            ],
+                            temperature=0.3
+                        )
+                        st.success("Advisor Response:")
+                        st.write(response.choices[0].message.content)
+                    except Exception as e:
+                        st.error(f"NVIDIA API Error: {e}")
 
 # --- TAB 2: FOREX & PAPER TRADING ---
 with tab2:
