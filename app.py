@@ -35,7 +35,6 @@ st.markdown("""
     .stMetric { background-color: #1E222D; padding: 15px; border-radius: 10px; border: 1px solid #2B2F3A; }
     </style>
 """, unsafe_allow_html=True)
-
 # --- DATABASE SETUP (SUPABASE WITH SQLITE FALLBACK) ---
 DB_URL = os.getenv("DB_URL")
 engine = None
@@ -43,17 +42,28 @@ IS_POSTGRES = False
 
 if DB_URL:
     try:
+        # Standardize postgresql protocol prefix
         conn_str = DB_URL.replace("postgres://", "postgresql://", 1) if DB_URL.startswith("postgres://") else DB_URL
-        if "sslmode" not in conn_str:
-            conn_str += "?sslmode=require" if "?" not in conn_str else "&sslmode=require"
 
-        test_engine = create_engine(conn_str, pool_pre_ping=True, connect_args={"connect_timeout": 5})
+        # Create engine compatible with Supabase Pooler (Port 6543)
+        test_engine = create_engine(
+            conn_str,
+            pool_pre_ping=True,
+            connect_args={
+                "connect_timeout": 10,
+                "prepare_threshold": None  # Prevents prepared statement errors on PgBouncer
+            }
+        )
+        
+        # Verify connection
         with test_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+            
         engine = test_engine
         IS_POSTGRES = True
-    except Exception:
-        st.warning("⚠️ Supabase connection failed. Falling back to local SQLite database.")
+        st.sidebar.success("⚡ Connected to Supabase Cloud DB")
+    except Exception as e:
+        st.warning(f"⚠️ Supabase connection failed ({str(e)}). Falling back to local SQLite database.")
         engine = create_engine("sqlite:///finance_hub.db")
 else:
     engine = create_engine("sqlite:///finance_hub.db")
