@@ -8,7 +8,7 @@ from openai import OpenAI
 import os
 from datetime import date, datetime
 
-# --- SAFE METATRADER 5 IMPORT ---
+# --- SAFE METATRADER 5 IMPORT FOR CLOUD COMPATIBILITY ---
 try:
     import MetaTrader5 as mt5
     MT5_AVAILABLE = True
@@ -16,7 +16,7 @@ except (ImportError, Exception):
     mt5 = None
     MT5_AVAILABLE = False
 
-# Import helpers
+# Import helpers from finance_hub.py
 from finance_hub import get_loan_summary, send_telegram_alert
 
 # --- PAGE CONFIGURATION ---
@@ -29,19 +29,47 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- DATABASE SETUP ---
+# --- DATABASE SETUP (SUPABASE WITH AGGRESSIVE FALLBACK) ---
 DB_URL = os.getenv("DB_URL")
+
+engine = None
+IS_POSTGRES = False
+
 if DB_URL:
-    if DB_URL.startswith("postgres://"):
-        DB_URL = DB_URL.replace("postgres://", "postgresql://", 1)
-    engine = create_engine(DB_URL)
+    try:
+        # Normalize connection string protocol
+        conn_str = DB_URL.replace("postgres://", "postgresql://", 1) if DB_URL.startswith("postgres://") else DB_URL
+        
+        # Add sslmode requirement if missing
+        if "sslmode" not in conn_str:
+            conn_str += "?sslmode=require" if "?" not in conn_str else "&sslmode=require"
+
+        # Create engine with a short 5-second connect timeout
+        test_engine = create_engine(
+            conn_str, 
+            pool_pre_ping=True, 
+            connect_args={"connect_timeout": 5}
+        )
+        
+        # Test connection actively
+        with test_engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        
+        engine = test_engine
+        IS_POSTGRES = True
+    except Exception as e:
+        st.warning("⚠️ Remote Supabase connection failed. Falling back to local SQLite database.")
+        engine = create_engine("sqlite:///finance_hub.db")
 else:
     engine = create_engine("sqlite:///finance_hub.db")
 
+# --- AUTO-CREATE TABLES (CROSS-DATABASE COMPATIBLE SYNTAX) ---
+pk_type = "SERIAL PRIMARY KEY" if IS_POSTGRES else "INTEGER PRIMARY KEY AUTOINCREMENT"
+
 with engine.begin() as conn:
-    conn.execute(text("""
+    conn.execute(text(f"""
         CREATE TABLE IF NOT EXISTS transactions (
-            id SERIAL PRIMARY KEY,
+            id {pk_type},
             entry_date TEXT,
             type TEXT,
             category TEXT,
@@ -49,9 +77,9 @@ with engine.begin() as conn:
             description TEXT
         );
     """))
-    conn.execute(text("""
+    conn.execute(text(f"""
         CREATE TABLE IF NOT EXISTS paper_trades (
-            id SERIAL PRIMARY KEY,
+            id {pk_type},
             trade_date TEXT,
             pair TEXT,
             type TEXT,
@@ -169,16 +197,14 @@ with tab2:
 
         if st.button("🚀 Run Autonomous Bot Cycle"):
             with st.spinner(f"Executing {strategy_type} algorithm on {strategy_pair}..."):
-                # Simulated strategy execution logic
                 base_price = {"EUR/USD": 1.0850, "GBP/USD": 1.2710, "USD/JPY": 152.30, "XAU/USD": 2650.00}[strategy_pair]
                 action = random.choice(["BUY", "SELL"])
                 entry_p = base_price
                 exit_p = round(entry_p + (random.uniform(-0.0050, 0.0080) if "USD" in strategy_pair and strategy_pair != "USD/JPY" else random.uniform(-1.5, 2.5)), 4)
                 
-                # Calculate PnL based on trade direction
                 pnl = round((exit_p - entry_p) * 1000, 2) if action == "BUY" else round((entry_p - exit_p) * 1000, 2)
 
-                # Record paper trade directly into Supabase
+                # Record paper trade into database
                 df_bot_trade = pd.DataFrame([{
                     "trade_date": str(date.today()),
                     "pair": strategy_pair,
@@ -192,7 +218,7 @@ with tab2:
 
                 st.success(f"Bot Executed {action} on {strategy_pair}! Entry: {entry_p} | Exit: {exit_p} | PnL: ${pnl}")
 
-                # Send Telegram alert if the strategy yields positive profit
+                # Send Telegram alert if positive profit
                 if pnl > 0:
                     alert_msg = f"🟢 *WINNING BOT SIGNAL DETECTED*\n• Pair: {strategy_pair}\n• Strategy: {strategy_type}\n• Action: {action}\n• Profit: +${pnl}\n• Status: Validated for Live Replication"
                     send_telegram_alert(alert_msg)
@@ -216,9 +242,8 @@ with tab3:
     client_code = os.getenv("ANGELONE_CLIENT_CODE")
 
     if not api_key or not client_code:
-        st.warning("⚠️ Angel One credentials not found in Streamlit Secrets. Enter `ANGELONE_API_KEY` and `ANGELONE_CLIENT_CODE` in Secrets to enable direct sync.")
+        st.warning("⚠️ Angel One credentials not found in Streamlit Secrets. Set `ANGELONE_API_KEY` and `ANGELONE_CLIENT_CODE` in Secrets to enable direct live sync.")
     
-    # Portfolio display layout
     st.markdown("### Holdings Summary")
     df_angel = pd.DataFrame([
         {"Symbol": "TATAMOTORS", "Qty": 15, "Avg Price": 920.50, "LTP": 980.20, "Current Value": 14703.00, "PnL": 895.50},
