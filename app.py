@@ -42,20 +42,17 @@ IS_POSTGRES = False
 
 if DB_URL:
     try:
-        # Standardize postgresql protocol prefix
         conn_str = DB_URL.replace("postgres://", "postgresql://", 1) if DB_URL.startswith("postgres://") else DB_URL
 
-        # Create engine compatible with Supabase Pooler (Port 6543)
         test_engine = create_engine(
             conn_str,
             pool_pre_ping=True,
             connect_args={
                 "connect_timeout": 10,
-                "prepare_threshold": None  # Prevents prepared statement errors on PgBouncer
+                "sslmode": "require"
             }
         )
         
-        # Verify connection
         with test_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
             
