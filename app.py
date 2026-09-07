@@ -103,7 +103,6 @@ loan_info = raw_loan_info if isinstance(raw_loan_info, dict) else {}
 account_no = loan_info.get('account_no', 'DELEE01180707')
 roi_val = loan_info.get('roi', 11.25)
 disbursed_val = loan_info.get('balance', 2089689.00)
-customer_val = loan_info.get('customer_transfer', 1883627.00)
 next_repay_val = loan_info.get('next_repay', 7877.00)
 
 # --- DASHBOARD HEADER METRICS ---

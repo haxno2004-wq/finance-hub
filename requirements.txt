@@ -1,8 +1,10 @@
 streamlit
 pandas
-plotly
 sqlalchemy
-psycopg2-binary
+plotly
+pyotp
 requests
 smartapi-python
-pyotp
+logzero
+websocket-client
+pycryptodome

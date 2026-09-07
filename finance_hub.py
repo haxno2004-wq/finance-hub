@@ -4,8 +4,8 @@ import requests
 def get_loan_summary(months_passed=1):
     account_no = "DELEE01180707"
     sanctioned_amount = 2090000.00
-    disbursed_amount = 2089689.00      # Exact total disbursed (99.99%)
-    customer_transfer = 1883627.00     # Net amount transferred to bank account
+    disbursed_amount = 2089689.00     # Exact total disbursed value (99.99%)
+    customer_transfer = 1883627.00    # Direct bank transfer portion
     annual_roi = 11.25
     monthly_repay = 7877.00
     next_due_date = "10-09-2026"
@@ -28,7 +28,7 @@ def send_telegram_alert(message):
     token = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("CHAT_ID")
     if not token or not chat_id:
-        return {"ok": False, "description": "Telegram credentials missing in Streamlit secrets"}
+        return {"ok": False, "description": "Telegram credentials missing"}
     
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
