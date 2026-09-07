@@ -58,13 +58,13 @@ cursor.execute("""
 conn.commit()
 
 # --- AI SETUP ---
-# --- AI SETUP ---
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 
 if NVIDIA_API_KEY:
     client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=NVIDIA_API_KEY)
 else:
     client = None
+
 # --- REAL-TIME TRADING PnL FETCHERS ---
 def get_forex_pnl():
     if not MT5_AVAILABLE:
@@ -141,7 +141,7 @@ with tab1:
                     try:
                         summary_prompt = f"Net Cash Balance: INR {cash_balance}, Total Expenses: INR {total_expenses}, Active MT5 PnL: ${forex_pnl_usd}. Loan Balance: INR {loan_info['balance']}."
                         response = client.chat.completions.create(
-                            model="meta/llama-3.1-70b-instruct",
+                            model="meta/llama-3.3-70b-instruct",
                             messages=[
                                 {"role": "system", "content": "You are a corporate financial advisor. Give brief budget insights."},
                                 {"role": "user", "content": summary_prompt}
@@ -170,7 +170,10 @@ with tab2:
             if st.button("📤 Send Signals to Telegram"):
                 sig_text = "💱 *FOREX SIGNALS*\n• EUR/USD: BUY @ 1.0850 (TP: 1.0920 / SL: 1.0810)\n• GBP/USD: SELL @ 1.2710 (TP: 1.2640 / SL: 1.2750)"
                 res = send_telegram_alert(sig_text)
-                st.success("Sent!") if res.get("ok") else st.error(f"Error: {res}")
+                if res.get("ok"):
+                    st.success("Sent!")
+                else:
+                    st.error(f"Telegram Error: {res.get('description', res)}")
                 
         with btn_col2:
             if st.button("⏰ Send Trading Reminder"):
@@ -181,7 +184,10 @@ with tab2:
                     "• Record results in Streamlit"
                 )
                 res = send_telegram_alert(rem_text)
-                st.success("Reminder Sent!") if res.get("ok") else st.error(f"Error: {res}")
+                if res.get("ok"):
+                    st.success("Reminder Sent!")
+                else:
+                    st.error(f"Telegram Error: {res.get('description', res)}")
 
     with col_log:
         st.markdown("### Log Paper Trade")
