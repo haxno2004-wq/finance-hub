@@ -1,5 +1,7 @@
 streamlit
-plotly
 pandas
-requests
+plotly
 openai
+requests
+sqlalchemy
+psycopg2-binary
