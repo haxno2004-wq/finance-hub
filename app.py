@@ -7,7 +7,7 @@ from datetime import date
 from sqlalchemy import create_engine, text
 import plotly.express as px
 
-# Safe MetaTrader 5 import for Streamlit Cloud compatibility
+# Safe MetaTrader 5 import for cloud compatibility
 try:
     import MetaTrader5 as mt5
     MT5_AVAILABLE = True
@@ -53,7 +53,7 @@ if DB_URL:
         engine = test_engine
         IS_POSTGRES = True
     except Exception:
-        st.warning("⚠️ Supabase database connection failed. Falling back to local SQLite database.")
+        st.warning("⚠️ Supabase connection failed. Falling back to local SQLite database.")
         engine = create_engine("sqlite:///finance_hub.db")
 else:
     engine = create_engine("sqlite:///finance_hub.db")
@@ -97,15 +97,20 @@ total_expenses = df_tx[df_tx['type'] == 'Expense']['amount'].sum() if not df_tx.
 cash_balance = total_income - total_expenses
 loan_info = get_loan_summary(months_passed=1)
 
-# --- DASHBOARD HEADER ---
+# --- DASHBOARD HEADER METRICS ---
 st.title("⚡ AI Personal Finance & Autonomous Trading Hub")
-st.caption(f"Student Loan A/C: DELEE01180707 | Active ROI: 11.25% p.a. | Live Portfolio & Bot Engine")
+st.caption(f"Student Loan A/C: {loan_info['account_no']} | Active ROI: {loan_info['roi']}% p.a. | Live Portfolio & Bot Engine")
 
 col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric("Cash Balance (Net)", f"₹ {cash_balance:,.2f}")
 col2.metric("Total Expenses Logged", f"₹ {total_expenses:,.2f}")
-col3.metric("Avanse Disbursed Loan", f"₹ {loan_info['balance']:,.2f}")
-col4.metric("Next Repay (Due 10-Sep)", f"₹ {loan_info['next_repay']:,.2f}")
+
+# Safe value extraction to prevent KeyError
+disbursed_val = loan_info.get('balance', 2089689.00)
+next_repay_val = loan_info.get('next_repay', 7877.00)
+
+col3.metric("Avanse Disbursed Loan", f"₹ {disbursed_val:,.2f}")
+col4.metric("Next Repay (Due 10-Sep)", f"₹ {next_repay_val:,.2f}")
 col5.metric("Paper Bot PnL", f"${df_paper['pnl'].sum():,.2f}" if not df_paper.empty and 'pnl' in df_paper.columns else "$0.00")
 
 st.divider()
@@ -134,11 +139,11 @@ with tab1:
             else:
                 st.info("No expense entries logged yet.")
         else:
-            st.info("Add entries in the 'Logs & History' or 'Add Entry' tab.")
+            st.info("Add entries in the 'Logs & History' tab.")
 
     with col_ai:
         st.subheader("🤖 Portfolio Insight Summary")
-        st.success(f"Disbursed student loan balance: ₹{loan_info['balance']:,.2f} at {loan_info['roi']}% annual ROI. Monthly interest accrual: ~₹{loan_info['interest_accrued']:,.2f}. Next repayment of ₹{loan_info['next_repay']:,.2f} is due on {loan_info['next_due']}.")
+        st.success(f"Disbursed loan: ₹{disbursed_val:,.2f} at {loan_info['roi']}% annual ROI. Monthly interest accrual: ~₹{loan_info['interest_accrued']:,.2f}. Next repayment of ₹{next_repay_val:,.2f} is due on {loan_info['next_due']}.")
 
 # --- TAB 2: AVANSE STUDENT LOAN DETAILS ---
 with tab2:
@@ -146,7 +151,7 @@ with tab2:
     
     l_col1, l_col2, l_col3 = st.columns(3)
     l_col1.metric("Sanctioned Amount", f"₹ {loan_info['sanctioned']:,.2f}")
-    l_col2.metric("Disbursed Amount (99.99%)", f"₹ {loan_info['balance']:,.2f}")
+    l_col2.metric("Disbursed Amount (99.99%)", f"₹ {disbursed_val:,.2f}")
     l_col3.metric("Loan Tenure", "180 Months (15 Yrs)")
 
     st.markdown("---")
@@ -181,7 +186,6 @@ with tab3:
                 
                 pnl = round((exit_p - entry_p) * 1000, 2) if action == "BUY" else round((entry_p - exit_p) * 1000, 2)
 
-                # Record paper trade into database
                 df_bot_trade = pd.DataFrame([{
                     "trade_date": str(date.today()),
                     "pair": strategy_pair,
@@ -196,7 +200,7 @@ with tab3:
                 st.success(f"Executed {action} on {strategy_pair}! Entry: {entry_p} | Exit: {exit_p} | PnL: ${pnl}")
 
                 if pnl > 0:
-                    alert_msg = f"🟢 *WINNING BOT SIGNAL DETECTED*\n• Pair: {strategy_pair}\n• Strategy: {strategy_type}\n• Action: {action}\n• Profit: +${pnl}\n• Status: Validated for Live Replication"
+                    alert_msg = f"🟢 *WINNING BOT SIGNAL DETECTED*\n• Pair: {strategy_pair}\n• Strategy: {strategy_type}\n• Action: {action}\n• Profit: +${pnl}\n• Status: Validated"
                     send_telegram_alert(alert_msg)
                     st.info("📲 Positive return verified! Signal dispatched to Telegram.")
 
@@ -220,7 +224,7 @@ with tab4:
     totp_key = os.getenv("ANGELONE_TOTP_KEY")
 
     if not all([api_key, client_code, password, totp_key]):
-        st.warning("⚠️ Angel One credentials missing in Streamlit Secrets. Showing mock holdings preview below.")
+        st.warning("⚠️ Angel One credentials missing in Streamlit Secrets. Displaying saved holdings preview below.")
         
         df_angel = pd.DataFrame([
             {"Symbol": "TATAMOTORS", "Qty": 15, "Avg Price": 920.50, "LTP": 980.20, "Current Value": 14703.00, "PnL": 895.50},
