@@ -1,7 +1,8 @@
 streamlit
 pandas
 plotly
-openai
-requests
 sqlalchemy
 psycopg2-binary
+requests
+smartapi-python
+pyotp
