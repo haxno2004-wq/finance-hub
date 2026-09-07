@@ -141,7 +141,7 @@ with tab1:
                     try:
                         summary_prompt = f"Net Cash Balance: INR {cash_balance}, Total Expenses: INR {total_expenses}, Active MT5 PnL: ${forex_pnl_usd}. Loan Balance: INR {loan_info['balance']}."
                         response = client.chat.completions.create(
-                            model="meta/llama-3.3-70b-instruct",
+                            model="nvidia/llama-3.3-nemotron-super-49b-v1",
                             messages=[
                                 {"role": "system", "content": "You are a corporate financial advisor. Give brief budget insights."},
                                 {"role": "user", "content": summary_prompt}
