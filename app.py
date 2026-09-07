@@ -96,14 +96,17 @@ total_income = df_tx[df_tx['type'] == 'Income']['amount'].sum() if not df_tx.emp
 total_expenses = df_tx[df_tx['type'] == 'Expense']['amount'].sum() if not df_tx.empty and 'type' in df_tx.columns else 0.0
 cash_balance = total_income - total_expenses
 
-# --- FETCH LOAN DATA SAFELY ---
+# --- FETCH LOAN DATA SAFELY & GLOBALLY ---
 raw_loan_info = get_loan_summary(months_passed=1)
 loan_info = raw_loan_info if isinstance(raw_loan_info, dict) else {}
 
 account_no = loan_info.get('account_no', 'DELEE01180707')
 roi_val = loan_info.get('roi', 11.25)
 disbursed_val = loan_info.get('balance', 2089689.00)
+customer_val = loan_info.get('customer_transfer', 1883627.00)
 next_repay_val = loan_info.get('next_repay', 7877.00)
+interest_accrued_val = loan_info.get('interest_accrued', 19590.83)
+next_due_val = loan_info.get('next_due', '10-09-2026')
 
 # --- DASHBOARD HEADER METRICS ---
 st.title("⚡ AI Personal Finance & Autonomous Trading Hub")
@@ -146,7 +149,7 @@ with tab1:
 
     with col_ai:
         st.subheader("🤖 Portfolio Insight Summary")
-        st.success(f"Total Disbursed: ₹{disbursed_val:,.2f} | Direct Bank Transfer: ₹{customer_val:,.2f}. Active ROI is {roi_val}%. Monthly interest accrual: ~₹{loan_info.get('interest_accrued', 19590.83):,.2f}. Next repayment of ₹{next_repay_val:,.2f} is due on {loan_info.get('next_due', '10-09-2026')}.")
+        st.success(f"Total Disbursed: ₹{disbursed_val:,.2f} | Direct Bank Transfer: ₹{customer_val:,.2f}. Active ROI is {roi_val}%. Monthly interest accrual: ~₹{interest_accrued_val:,.2f}. Next repayment of ₹{next_repay_val:,.2f} is due on {next_due_val}.")
 
 # --- TAB 2: AVANSE STUDENT LOAN DETAILS ---
 with tab2:
