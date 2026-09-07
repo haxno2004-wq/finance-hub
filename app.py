@@ -95,20 +95,24 @@ except Exception:
 total_income = df_tx[df_tx['type'] == 'Income']['amount'].sum() if not df_tx.empty and 'type' in df_tx.columns else 0.0
 total_expenses = df_tx[df_tx['type'] == 'Expense']['amount'].sum() if not df_tx.empty and 'type' in df_tx.columns else 0.0
 cash_balance = total_income - total_expenses
-loan_info = get_loan_summary(months_passed=1)
+
+# --- FETCH LOAN DATA SAFELY ---
+raw_loan_info = get_loan_summary(months_passed=1)
+loan_info = raw_loan_info if isinstance(raw_loan_info, dict) else {}
+
+account_no = loan_info.get('account_no', 'DELEE01180707')
+roi_val = loan_info.get('roi', 11.25)
+disbursed_val = loan_info.get('balance', 2089689.00)
+customer_val = loan_info.get('customer_transfer', 1883627.00)
+next_repay_val = loan_info.get('next_repay', 7877.00)
 
 # --- DASHBOARD HEADER METRICS ---
 st.title("⚡ AI Personal Finance & Autonomous Trading Hub")
-st.caption(f"Student Loan A/C: {loan_info['account_no']} | Active ROI: {loan_info['roi']}% p.a. | Live Portfolio & Bot Engine")
+st.caption(f"Student Loan A/C: {account_no} | Active ROI: {roi_val}% p.a. | Live Portfolio & Bot Engine")
 
 col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric("Cash Balance (Net)", f"₹ {cash_balance:,.2f}")
 col2.metric("Total Expenses Logged", f"₹ {total_expenses:,.2f}")
-
-# Safe value extraction to prevent KeyError
-disbursed_val = loan_info.get('balance', 2089689.00)
-next_repay_val = loan_info.get('next_repay', 7877.00)
-
 col3.metric("Avanse Disbursed Loan", f"₹ {disbursed_val:,.2f}")
 col4.metric("Next Repay (Due 10-Sep)", f"₹ {next_repay_val:,.2f}")
 col5.metric("Paper Bot PnL", f"${df_paper['pnl'].sum():,.2f}" if not df_paper.empty and 'pnl' in df_paper.columns else "$0.00")
@@ -143,19 +147,19 @@ with tab1:
 
     with col_ai:
         st.subheader("🤖 Portfolio Insight Summary")
-        st.success(f"Disbursed loan: ₹{disbursed_val:,.2f} at {loan_info['roi']}% annual ROI. Monthly interest accrual: ~₹{loan_info['interest_accrued']:,.2f}. Next repayment of ₹{next_repay_val:,.2f} is due on {loan_info['next_due']}.")
+        st.success(f"Total Disbursed: ₹{disbursed_val:,.2f} | Direct Bank Transfer: ₹{customer_val:,.2f}. Active ROI is {roi_val}%. Monthly interest accrual: ~₹{loan_info.get('interest_accrued', 19590.83):,.2f}. Next repayment of ₹{next_repay_val:,.2f} is due on {loan_info.get('next_due', '10-09-2026')}.")
 
 # --- TAB 2: AVANSE STUDENT LOAN DETAILS ---
 with tab2:
     st.subheader("🎓 Avanse Student Loan International")
     
     l_col1, l_col2, l_col3 = st.columns(3)
-    l_col1.metric("Sanctioned Amount", f"₹ {loan_info['sanctioned']:,.2f}")
-    l_col2.metric("Disbursed Amount (99.99%)", f"₹ {disbursed_val:,.2f}")
-    l_col3.metric("Loan Tenure", "180 Months (15 Yrs)")
+    l_col1.metric("Sanctioned Amount", f"₹ {loan_info.get('sanctioned', 2090000.00):,.2f}")
+    l_col2.metric("Total Disbursed (99.99%)", f"₹ {disbursed_val:,.2f}")
+    l_col3.metric("Net In-Bank Transfer", f"₹ {customer_val:,.2f}")
 
     st.markdown("---")
-    st.markdown("### Disbursed Breakup Summary")
+    st.markdown("### Disbursement History Breakup")
     df_disbursement = pd.DataFrame([
         {"Date": "31-07-2026", "Beneficiary Party": "VAS", "Beneficiary Name": "ICICI Lombard GIC LTD", "Account Number": "000405007307", "Amount (₹)": 58126.00, "UTR": "SBIN526213966119"},
         {"Date": "31-07-2026", "Beneficiary Party": "VAS", "Beneficiary Name": "Bajaj Finserv Health Ltd", "Account Number": "57500000397474", "Amount (₹)": 62243.00, "UTR": "SBIN526213966108"},
