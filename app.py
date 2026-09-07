@@ -140,8 +140,9 @@ with tab1:
                 with st.spinner("Analyzing financial logs..."):
                     try:
                         summary_prompt = f"Net Cash Balance: INR {cash_balance}, Total Expenses: INR {total_expenses}, Active MT5 PnL: ${forex_pnl_usd}. Loan Balance: INR {loan_info['balance']}."
+                        # Updated to active NVIDIA NIM endpoint
                         response = client.chat.completions.create(
-                            model="nvidia/llama-3.3-nemotron-super-49b-v1",
+                            model="nvidia/nemotron-3.5-lightning-30b-a3b",
                             messages=[
                                 {"role": "system", "content": "You are a corporate financial advisor. Give brief budget insights."},
                                 {"role": "user", "content": summary_prompt}
